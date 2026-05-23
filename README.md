@@ -154,6 +154,14 @@ The repository currently contains two storage paths:
 
 The structured store is the path to harden for real applications. The simple root store is useful for explaining the core deterministic addressing mechanism.
 
+## Non-goals / Current Limits
+
+- Exact-key retrieval only: the GDE returns data when the lookup key resolves to the same deterministic address used at write time.
+- No fuzzy semantic retrieval yet: queries such as "what is a neural network?" are not automatically mapped to stored keys such as `neural network architecture`.
+- No document ingestion or chunking yet: there is no committed pipeline for splitting source documents, assigning canonical chunk keys, writing manifests, or listing stored keys.
+- Collision handling depends on the storage path: the structured store handles occupied slots with fingerprints, CRC checks, and bounded probing; the simple root demo store writes directly to computed offsets and can overwrite on collision.
+- The Python semantic refinery and the Mojo storage engine are still demonstration layers, not a unified production ingestion/retrieval pipeline.
+
 ## Status
 
 | Component | Status |
