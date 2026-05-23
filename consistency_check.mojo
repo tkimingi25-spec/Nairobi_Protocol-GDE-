@@ -1,25 +1,49 @@
-from phonological import compare
+from addressing import coordinate_to_offset, coordinate_to_offset_raw
+from phonological import compare, universal_geometric_hash
 
 def main() raises:
-    var word_a = String("Quantum")
-    var word_b = String("Symmetry")
+    var semantic_left = String("Quantum")
+    var semantic_right = String("Symmetry")
+    var exact_left = String("neural0")
+    var exact_right = String("quantum1")
 
-    var dist = compare(word_a, word_b)
+    var dist = compare(semantic_left, semantic_right)
+    var neural_hash = universal_geometric_hash(exact_left)
+    var quantum_hash = universal_geometric_hash(exact_right)
+    var neural_raw = coordinate_to_offset_raw(neural_hash.data)
+    var quantum_raw = coordinate_to_offset_raw(quantum_hash.data)
+    var neural_aligned = coordinate_to_offset(neural_hash.data)
+    var quantum_aligned = coordinate_to_offset(quantum_hash.data)
 
     print("--- GDE Cross-Hardware Consistency Check ---")
-    print("Comparing: Quantum vs Symmetry")
-    print("Distance Result: ", dist)
+    print("Comparing:", semantic_left, "vs", semantic_right)
+    print("Distance Result:", dist)
+    print("")
+    print("Raw offsets:")
+    print(" ", exact_left, "->", neural_raw)
+    print(" ", exact_right, "->", quantum_raw)
+    print("Aligned offsets:")
+    print(" ", exact_left, "->", neural_aligned)
+    print(" ", exact_right, "->", quantum_aligned)
 
-    # Tolerance-based check instead of exact float match
-    var desktop_baseline = Float64(64.19382644539132)
-    var tolerance = Float64(0.0001)
-    var diff = dist - desktop_baseline
+    var expected_distance = Float64(0.4167526183865839)
+    var expected_neural_raw = UInt64(83767983884)
+    var expected_quantum_raw = UInt64(82415597475)
+    var expected_neural_aligned = UInt64(83767983872)
+    var expected_quantum_aligned = UInt64(82415597312)
+    var tolerance = Float64(0.000000001)
+    var diff = dist - expected_distance
     if diff < 0:
         diff = -diff
 
-    if diff < tolerance:
-        print("STATUS: VERIFIED — within tolerance")
+    if (
+        diff < tolerance
+        and neural_raw == expected_neural_raw
+        and quantum_raw == expected_quantum_raw
+        and neural_aligned == expected_neural_aligned
+        and quantum_aligned == expected_quantum_aligned
+    ):
+        print("STATUS: VERIFIED - deterministic outputs match baseline")
     else:
         print("STATUS: VARIANCE DETECTED")
-        print("Difference: ", diff)
-        print("Tolerance:  ", tolerance)
+        print("Distance diff:", diff)

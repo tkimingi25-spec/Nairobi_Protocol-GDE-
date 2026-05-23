@@ -1,20 +1,9 @@
+from collections import List
 from std.time import perf_counter_ns
+from addressing import SLOT_SIZE, coordinate_to_offset
 from phonological import universal_geometric_hash
 
-comptime ADDRESS_SPACE = UInt64(100) * 1024 * 1024 * 1024
-comptime SLOT_SIZE     = UInt64(256)
 comptime NUM_QUERIES   = 1_000_000
-
-def coordinate_to_offset(vector: SIMD[DType.float64, 24]) -> UInt64:
-    var weighted_sum = Float64(0.0)
-    for i in range(24):
-        var weight = Float64((i + 1) * 2654435761)
-        var v = vector[i]
-        if v < 0:
-            v = -v
-        weighted_sum += v * weight
-    var raw = UInt64(weighted_sum % Float64(ADDRESS_SPACE))
-    return (raw // SLOT_SIZE) * SLOT_SIZE
 
 def main() raises:
     var file_path = "knowledge_store.bin"

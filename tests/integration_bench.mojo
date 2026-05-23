@@ -1,3 +1,4 @@
+from collections import List, Tuple
 from phonological import compare
 
 def main():

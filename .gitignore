@@ -29,3 +29,4 @@ bin/logic_engine_portable.s
 .bin/
 .vscode/
 .tests/
+data/knowledge_base.json

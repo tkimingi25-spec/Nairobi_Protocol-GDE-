@@ -6,7 +6,7 @@ from typing import Iterable
 
 
 SIGNAL_LEN = 32
-HASH_DIM = 8
+HASH_DIM = 24
 
 
 def _signal(text: str) -> list[float]:

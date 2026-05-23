@@ -1,23 +1,14 @@
+from collections import List
+from std.time import perf_counter_ns
+from addressing import coordinate_to_offset
 from phonological import universal_geometric_hash
-from time import perf_counter_ns
 
-comptime ADDRESS_SPACE = UInt64(100) * 1024 * 1024 * 1024
 comptime TEST_SIZE = 10000
-
-def coordinate_to_offset(vector: SIMD[DType.float64, 24]) -> UInt64:
-    var weighted_sum = Float64(0.0)
-    for i in range(24):
-        var weight = Float64((i + 1) * 2654435761)
-        var v = vector[i]
-        if v < 0:
-            v = -v
-        weighted_sum += v * weight
-    return UInt64(weighted_sum % Float64(ADDRESS_SPACE))
 
 def main() raises:
     print("--- GDE Mojo Collision Test ---")
     print("Testing", TEST_SIZE, "unique words")
-    print("Address space: 100GB")
+    print("Address space: 100GB (slot-aligned)")
     print("------------------------------")
 
     var offsets = List[UInt64]()
@@ -48,11 +39,9 @@ def main() raises:
         var vec = universal_geometric_hash(word)
         var offset = coordinate_to_offset(vec.data)
 
-        var found = False
         for j in range(len(offsets)):
             if offsets[j] == offset:
                 collisions += 1
-                found = True
                 break
 
         offsets.append(offset)

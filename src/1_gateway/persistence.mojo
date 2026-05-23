@@ -1,4 +1,4 @@
-from phonological import HashVector
+from phonological import HashVector, HASH_DIM
 from std.os import stat
 
 struct GatewayStore:
@@ -17,9 +17,9 @@ struct GatewayStore:
             offset = 0
         with open(self.vault_path, "a") as f:
             f.write(word + ":")
-            for i in range(24):
+            for i in range(HASH_DIM):
                 f.write(String(vector.data[i]))
-                if i < 23:
+                if i < HASH_DIM - 1:
                     f.write(",")
             f.write(chr(10))
         with open(self.index_path, "a") as idx:
@@ -46,6 +46,6 @@ struct GatewayStore:
             var parts = target_line.split(":")
             var vec_data = parts[1].split(",")
             var vector = HashVector()
-            for j in range(24):
+            for j in range(HASH_DIM):
                 vector.data[j] = Float64(vec_data[j])
             return vector^
