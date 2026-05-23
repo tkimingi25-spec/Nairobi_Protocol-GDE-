@@ -2,6 +2,8 @@
 
 The Nairobi Protocol GDE is organized as a deterministic retrieval pipeline. Its central contract is simple: the same key should always produce the same address, so retrieval can jump directly to a known slot.
 
+This repository should be read as an architecture prototype and verification harness. It contains working core mechanics and benchmark programs, but production layers such as ingestion, API serving, concurrency control, and LLM query mediation are still pending.
+
 ## Runtime Path
 
 ```text

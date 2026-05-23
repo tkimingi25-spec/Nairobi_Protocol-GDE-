@@ -8,6 +8,8 @@
 
 The Geometric Determinism Engine is a deterministic address-computation layer for knowledge retrieval.
 
+This repository is an architecture prototype and verification harness. It demonstrates the core deterministic addressing design, storage experiments, and benchmark evidence; it is not a full production-ready retrieval system.
+
 Given an input key, the GDE computes the exact byte address where that key's knowledge chunk should live, then seeks directly to that address in a file-backed store. It does not scan a corpus, traverse a vector index, or train a model.
 
 ```text
@@ -156,6 +158,7 @@ The structured store is the path to harden for real applications. The simple roo
 
 ## Non-goals / Current Limits
 
+- Architecture prototype, not production system: the repo validates core mechanics and documents pending production layers.
 - Exact-key retrieval only: the GDE returns data when the lookup key resolves to the same deterministic address used at write time.
 - No fuzzy semantic retrieval yet: queries such as "what is a neural network?" are not automatically mapped to stored keys such as `neural network architecture`.
 - No document ingestion or chunking yet: there is no committed pipeline for splitting source documents, assigning canonical chunk keys, writing manifests, or listing stored keys.
