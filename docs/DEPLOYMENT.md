@@ -4,6 +4,37 @@
 
 Generic `x86_64` laptop with `SSE4.2`, `AVX`, and 4 GB RAM.
 
+## Dependencies
+
+Install Pixi:
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+Install the project environment:
+
+```bash
+pixi project channel add https://conda.modular.com/max
+pixi install
+```
+
+The Pixi environment provides Python, MAX/Mojo, NetworkX, SQLite, and command aliases from `pixi.toml`.
+
+## Verification Path
+
+Before deployment, run:
+
+```bash
+pixi run test-smoke
+```
+
+For the long structured-store write benchmark:
+
+```bash
+pixi run stress-v2
+```
+
 ## Build Path
 
 Use WSL after reboot and Ubuntu provisioning:
@@ -46,3 +77,4 @@ These are engineering estimates, not measured hardware telemetry:
 - Prefer one mmap-backed subgraph family at a time on 4 GB hardware.
 - Use the `finance.bin` and `sensors.bin` atlas split to avoid cross-domain cache pollution.
 - Benchmark from AC power first, then re-check latency on battery because older mobile CPUs often downclock aggressively.
+- Keep generated files such as `knowledge_store.bin`, `knowledge_store_v2.bin`, and `data/global_ontology.db` out of commits.

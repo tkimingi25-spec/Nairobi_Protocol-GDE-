@@ -10,7 +10,7 @@ struct GatewayStore:
         self.index_path = vault_path + ".idx"
 
     def save_vector(self, word: String, vector: HashVector) raises:
-        var offset = 0
+        var offset: Int
         try:
             offset = Int(stat(self.vault_path).st_size)
         except:

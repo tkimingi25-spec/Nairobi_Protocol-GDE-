@@ -1,4 +1,4 @@
-from collections import List, Tuple
+from std.collections import List
 from addressing import DEFAULT_ADDRESS_SPACE, default_weights, slot_align, weighted_offset_raw
 from phonological import HashVector, universal_geometric_hash, compare
 
@@ -55,19 +55,23 @@ def main() raises:
 
     print("")
     print("Determinism Check (same word, 3 calls):")
-    for i in range(3):
+    for _ in range(3):
         var offset = bridge.word_to_offset("Quantum")
         print("  Quantum ->", offset)
 
     print("")
     print("Semantic Proximity Check:")
-    var pairs = List[Tuple[String, String]]()
-    pairs.append(("Neural", "Logic"))
-    pairs.append(("Apple", "Orbit"))
-    pairs.append(("Sensor", "Sensors"))
-    for i in range(len(pairs)):
-        var a = pairs[i][0]
-        var b = pairs[i][1]
+    var left = List[String]()
+    var right = List[String]()
+    left.append("Neural")
+    right.append("Logic")
+    left.append("Apple")
+    right.append("Orbit")
+    left.append("Sensor")
+    right.append("Sensors")
+    for i in range(len(left)):
+        var a = left[i]
+        var b = right[i]
         var close = bridge.words_are_close(a, b, Float64(0.3))
         print(" ", a, "~", b, "->", close)
 

@@ -68,16 +68,19 @@ def serialize_header(header: SlotHeader) -> String:
     var cr = to_hex(UInt64(header.crc32), 8)
     return fp + pl + fl + vr + cr
 
-def parse_header(data: String) -> SlotHeader:
-    var h = SlotHeader()
+def parse_header_into(data: String, mut h: SlotHeader):
     if data.byte_length() < HEADER_SIZE:
-        return h
+        h.key_fingerprint = 0
+        h.payload_length = 0
+        h.flags = 0
+        h.version = FORMAT_VERSION
+        h.crc32 = 0
+        return
     h.key_fingerprint = parse_hex_sub(data, 0, 16)
     h.payload_length = UInt16(parse_hex_sub(data, 16, 4))
     h.flags = UInt8(parse_hex_sub(data, 20, 2))
     h.version = UInt8(parse_hex_sub(data, 22, 2))
     h.crc32 = UInt32(parse_hex_sub(data, 24, 8))
-    return h
 
 def substring(s: String, start: Int, length: Int) -> String:
     var res = String("")

@@ -1,4 +1,4 @@
-from collections import List
+from std.collections import List
 from std.time import perf_counter_ns
 from structured_store import StructuredStore
 

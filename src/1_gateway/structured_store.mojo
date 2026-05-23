@@ -1,6 +1,6 @@
 from phonological import universal_geometric_hash
 from addressing import coordinate_to_offset
-from slot_format import SlotHeader, SLOT_SIZE, HEADER_SIZE, PAYLOAD_CAPACITY, MAX_PROBE_DEPTH, FLAG_OCCUPIED, FLAG_TOMBSTONE, serialize_header, parse_header, substring
+from slot_format import SlotHeader, SLOT_SIZE, HEADER_SIZE, PAYLOAD_CAPACITY, MAX_PROBE_DEPTH, FLAG_OCCUPIED, FLAG_TOMBSTONE, serialize_header, parse_header_into, substring
 from fingerprint import fnv1a_64
 from integrity import crc32_compute
 
@@ -27,7 +27,8 @@ struct StructuredStore:
                 _ = f.seek(offset)
                 var existing = f.read(HEADER_SIZE)
 
-                var header = parse_header(existing)
+                var header = SlotHeader()
+                parse_header_into(existing, header)
 
                 if header.is_continuation():
                     continue
@@ -46,7 +47,7 @@ struct StructuredStore:
                     var pad_len = PAYLOAD_CAPACITY - payload_len
                     if pad_len > 0:
                         var pad = String("")
-                        for i in range(pad_len):
+                        for _ in range(pad_len):
                             pad += chr(0)
                         f.write(pad)
                     return True
@@ -57,13 +58,13 @@ struct StructuredStore:
         var fingerprint = fnv1a_64(key)
         var vec = universal_geometric_hash(key)
         var base_offset = coordinate_to_offset(vec.data)
-
         with open(self.file_path, "rw") as f:
             for probe in range(MAX_PROBE_DEPTH):
                 var offset = base_offset + UInt64(probe) * SLOT_SIZE
                 _ = f.seek(offset)
                 var existing = f.read(HEADER_SIZE)
-                var header = parse_header(existing)
+                var header = SlotHeader()
+                parse_header_into(existing, header)
 
                 if header.is_continuation():
                     continue
@@ -80,5 +81,79 @@ struct StructuredStore:
                     if check != header.crc32:
                         raise Error("CRC mismatch")
                     return payload
+
+        raise Error("Key not found after max probes")
+
+    # New API: operate using an already-open file handle to avoid repeatedly opening/closing.
+    def write_with_handle(self, mut f: FileHandle, key: String, value: String) raises -> Bool:
+        var fingerprint = fnv1a_64(key)
+        var vec = universal_geometric_hash(key)
+        var base_offset = coordinate_to_offset(vec.data)
+        
+        var payload_len = value.byte_length()
+        if payload_len > PAYLOAD_CAPACITY:
+            payload_len = PAYLOAD_CAPACITY
+        var payload_str = substring(value, 0, payload_len)
+        var crc = crc32_compute(payload_str, payload_len)
+
+        for probe in range(MAX_PROBE_DEPTH):
+            var offset = base_offset + UInt64(probe) * SLOT_SIZE
+            _ = f.seek(offset)
+            var existing = f.read(HEADER_SIZE)
+
+            var header = SlotHeader()
+            parse_header_into(existing, header)
+
+            if header.is_continuation():
+                continue
+
+            if header.is_empty() or header.is_tombstone() or header.key_fingerprint == fingerprint:
+                var new_header = SlotHeader()
+                new_header.key_fingerprint = fingerprint
+                new_header.payload_length = UInt16(payload_len)
+                new_header.flags = FLAG_OCCUPIED
+                new_header.crc32 = crc
+                
+                _ = f.seek(offset)
+                f.write(serialize_header(new_header))
+                f.write(payload_str)
+                
+                var pad_len = PAYLOAD_CAPACITY - payload_len
+                if pad_len > 0:
+                    var pad = String("")
+                    for _ in range(pad_len):
+                        pad += chr(0)
+                    f.write(pad)
+                return True
+
+        return False
+
+    def read_with_handle(self, mut f: FileHandle, key: String) raises -> String:
+        var fingerprint = fnv1a_64(key)
+        var vec = universal_geometric_hash(key)
+        var base_offset = coordinate_to_offset(vec.data)
+
+        for probe in range(MAX_PROBE_DEPTH):
+            var offset = base_offset + UInt64(probe) * SLOT_SIZE
+            _ = f.seek(offset)
+            var existing = f.read(HEADER_SIZE)
+            var header = SlotHeader()
+            parse_header_into(existing, header)
+
+            if header.is_continuation():
+                continue
+
+            if header.is_empty():
+                raise Error("Key not found")
+
+            if header.is_tombstone():
+                continue
+
+            if header.key_fingerprint == fingerprint:
+                var payload = f.read(Int(header.payload_length))
+                var check = crc32_compute(payload, Int(header.payload_length))
+                if check != header.crc32:
+                    raise Error("CRC mismatch")
+                return payload
 
         raise Error("Key not found after max probes")

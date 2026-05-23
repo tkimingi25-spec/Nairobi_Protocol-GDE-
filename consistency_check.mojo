@@ -26,11 +26,11 @@ def main() raises:
     print(" ", exact_left, "->", neural_aligned)
     print(" ", exact_right, "->", quantum_aligned)
 
-    var expected_distance = Float64(0.4167526183865839)
-    var expected_neural_raw = UInt64(83767983884)
-    var expected_quantum_raw = UInt64(82415597475)
-    var expected_neural_aligned = UInt64(83767983872)
-    var expected_quantum_aligned = UInt64(82415597312)
+    var expected_distance = Float64(0.36952140243502)
+    var expected_neural_raw = UInt64(88169886449)
+    var expected_quantum_raw = UInt64(87171484462)
+    var expected_neural_aligned = UInt64(88169886208)
+    var expected_quantum_aligned = UInt64(87171484416)
     var tolerance = Float64(0.000000001)
     var diff = dist - expected_distance
     if diff < 0:

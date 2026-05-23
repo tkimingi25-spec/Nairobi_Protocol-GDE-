@@ -1,4 +1,4 @@
-from collections import List
+from std.collections import List
 from std.time import perf_counter_ns
 from addressing import SLOT_SIZE, coordinate_to_offset
 from phonological import universal_geometric_hash

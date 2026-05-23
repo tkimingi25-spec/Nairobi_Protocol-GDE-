@@ -1,4 +1,4 @@
-from collections import List
+from std.collections import List
 from std.time import perf_counter_ns
 from addressing import SLOT_SIZE, coordinate_to_offset
 from phonological import universal_geometric_hash
@@ -66,7 +66,6 @@ def main() raises:
 
         var p2_ms    = Float64(t3 - t2) / 1_000_000.0
         var p2_pq_us = (p2_ms / Float64(NUM_QUERIES)) * 1000.0
-        var p2_pq_ms = p2_ms / Float64(NUM_QUERIES)
         print("  Total:       ", p2_ms, "ms")
         print("  Per query:   ", p2_pq_us, "us")
         print("  Queries/sec: ", Float64(NUM_QUERIES) / (p2_ms / 1000.0))

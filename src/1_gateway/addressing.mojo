@@ -7,7 +7,7 @@ def default_weights() -> SIMD[DType.float64, HASH_DIM]:
     var weights = SIMD[DType.float64, HASH_DIM](0.0)
     for i in range(HASH_DIM):
         weights[i] = Float64((i + 1) * 2654435761)
-    return weights^
+    return weights
 
 def weighted_offset_raw(
     vector: SIMD[DType.float64, HASH_DIM],

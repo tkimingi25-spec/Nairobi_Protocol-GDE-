@@ -1,6 +1,6 @@
 from phonological import universal_geometric_hash
 from persistence import GatewayStore
-from collections import List
+from std.collections import List
 
 def main():
     try:

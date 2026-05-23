@@ -10,7 +10,7 @@ def main() raises:
         _ = f.seek(0)
         f.write("A")
 
-        _ = f.seek(Int(size - 1))
+        _ = f.seek(size - 1)
         f.write("Z")
 
         print("Success: Geometric Boundary Jump completed.")
@@ -18,7 +18,7 @@ def main() raises:
         _ = f.seek(0)
         print("Data at 0GB: ", f.read(1))
 
-        _ = f.seek(Int(size - 1))
+        _ = f.seek(size - 1)
         print("Data at 100GB: ", f.read(1))
 
     print("RESULT: Deterministic Addressing across 100GB verified on 4GB RAM.")
