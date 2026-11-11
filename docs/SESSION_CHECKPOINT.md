@@ -82,10 +82,16 @@ the header region. Also: real extents.bin is heavily fragmented
 (written onto a nearly-full disk); synthetic stores are fresh
 contiguous writes.
 
+First bisect step done 17:48: 8 MB of real prefix + 8 MB zeros
+(16 MB total) FAILS. Trigger lies within the first 8 MB — the
+real GGUF header is 7,835,936 bytes, so plausibly the full
+header region is required, or something inside it.
+
 Next hypotheses to test (in order):
-1. Bisect the 16 MB repro: stores with first 1/2/4/8 MB of real
-   bytes padded with zeros to 16 MB — find the failing prefix
-   length, then the failing byte range.
+1. Continue bisecting: 1/2/4 MB real prefix padded to 16 MB —
+   find the failing prefix length, then the failing byte range.
+   Especially: does a store fail whose backing is EXACTLY the
+   7,835,936-byte header plus one tensor?
 2. Defragment/copy test without disk cost: hardlink already
    failed identically, so fragmentation is unlikely; skip.
 3. Compare against memfs serving a >4 GB file: memfs is RAM-backed
