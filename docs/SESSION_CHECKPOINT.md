@@ -56,27 +56,45 @@ application's own read is failed by the I/O/cache layer above the
 FSD with INVALID_PARAMETER, after ~5-9 MB of successful readahead.
 No exception is ever thrown inside the adapter.
 
+Update 17:48 — minimal repro found, more exonerations:
+- Reported-size override (mount real extents, report 2.6 GB):
+  STILL FAILS. Reported FileSize value exonerated.
+- Store containing ONLY the first 16 MB of the real extents
+  (16 MB total): FAILS. Minimal repro is small.
+- Same 16 MB XOR-scrambled: FAILS. Not content recognition (AV).
+- Backing file read directly (no mount): first 16 MB sequential
+  reads perfectly. The data and disk are fine.
+- Fresh drive letter K: (no possible mount shadowing): FAILS.
+- A zombie GdeFs5 process (PID 4648, owned by another session,
+  "Access is denied" on kill) still exists from an early probe.
+  It may shadow G: mounts; use a fresh letter and kill it from
+  its owning session (or reboot) before trusting any G: result.
+  It does NOT explain the fault (K: test above).
+
+So: identical adapter + consumer + mount style; backing files
+written by ingest (tiny/mid/2.6 GB) work; a plain 16 MB copy of
+the real file's first bytes fails. Remaining uncontrolled
+variables vs the working stores: the real data's first ~8 MB is
+a dense GGUF header (7.8 MB, 291 tensors, tokenizer tables)
+whereas synthetic headers are ~100 bytes — the cache readahead
+in failing runs always dies after ~5-9 MB, i.e. around/just past
+the header region. Also: real extents.bin is heavily fragmented
+(written onto a nearly-full disk); synthetic stores are fresh
+contiguous writes.
+
 Next hypotheses to test (in order):
-1. Reported-size value: add a size-override arg to GdeFs and mount
-   the real extents reporting e.g. 2.6 GB / 4.297 GB. If reads then
-   work, the trigger is the reported FileSize value 4661211424
-   itself interacting with cache/section creation.
-2. Content bisect without disk cost: mount the real store and read
-   via memory mapping only (paging path works at kernel level);
-   and/or create a store whose backing file is a hardlink to the
-   real extents but with the adapter reading through a bounded
-   pread wrapper that caps every backing read at 32 KB.
+1. Bisect the 16 MB repro: stores with first 1/2/4/8 MB of real
+   bytes padded with zeros to 16 MB — find the failing prefix
+   length, then the failing byte range.
+2. Defragment/copy test without disk cost: hardlink already
+   failed identically, so fragmentation is unlikely; skip.
 3. Compare against memfs serving a >4 GB file: memfs is RAM-backed
-   (16 GB machine cannot hold 4.66 GB + OS comfortably; a 4.5 GB
-   memfs file is feasible) — if memfs also fails >4 GB, the fault
-   is in WinFsp/Windows large-file handling on user-mode FSDs,
-   not in GdeFs at all, and the correct move is the WSL2/FUSE
-   path (repo's target platform).
-4. Re-examine `GetFileInfo` responses byte-for-byte against memfs
-   for the big file (AllocationSize, FileSize, times) using the
-   WinFsp debug log at maximum verbosity on a SMALL failing
-   repro — if a small repro can be made to fail (try: synthetic
-   store with the real 7.8 MB header bytes as its header extent).
+   (a 4.5 GB memfs file is feasible) — if memfs also fails >4 GB,
+   the fault is in WinFsp/Windows large-file handling on
+   user-mode FSDs, not GdeFs, and the correct move is the
+   WSL2/FUSE path (repo's target platform).
+4. Try the FUSE adapter under WSL2 once a distro is installed —
+   it bypasses the Windows cache-manager path entirely.
 
 Adapter builds in `C:\tmp\gdefs\`: GdeFs5 (Init-aligned),
 GdeFs6 (+ stable timestamps), GdeFs7 (no per-read logging,

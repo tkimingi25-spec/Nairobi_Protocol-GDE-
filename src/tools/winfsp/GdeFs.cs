@@ -33,11 +33,13 @@ namespace GdeFsApp
         private long Reads;
         private long Bytes;
 
-        public GdeFs(string storeDir)
+        public GdeFs(string storeDir, long sizeOverride = 0)
         {
             ExtentsPath = Path.Combine(storeDir, "extents.bin");
             StatsPath = Path.Combine(storeDir, "gde_stats.log");
-            FileSize = new System.IO.FileInfo(ExtentsPath).Length;
+            FileSize = sizeOverride > 0
+                ? sizeOverride
+                : new System.IO.FileInfo(ExtentsPath).Length;
             FileTime = (UInt64)DateTime.Now.ToFileTimeUtc();
             Stream = new FileStream(ExtentsPath, FileMode.Open, FileAccess.Read,
                 FileShare.Read, 1 << 20, FileOptions.RandomAccess);
@@ -256,7 +258,8 @@ namespace GdeFsApp
                 Console.WriteLine("usage: GdeFs.exe <store_dir> <mountpoint>");
                 return 2;
             }
-            FileSystemHost host = new FileSystemHost(new GdeFs(args[0]));
+            long sizeOverride = args.Length > 2 ? long.Parse(args[2]) : 0;
+            FileSystemHost host = new FileSystemHost(new GdeFs(args[0], sizeOverride));
             host.FileSystemName = "GDE";
             if (0 > host.Mount(args[1], null, false, 0))
             {
