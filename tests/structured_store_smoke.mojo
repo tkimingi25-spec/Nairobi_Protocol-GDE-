@@ -13,7 +13,7 @@ def main():
 
             for i in range(len(keys)):
                 var k = keys[i]
-                var v = String("value-") + to_string(i)
+                var v = String("value-") + String(i)
                 var ok = store.write_with_handle(f, k, v)
                 if not ok:
                     print("write failed for", k)

@@ -14,9 +14,18 @@ jobs:
         run: |
           pixi project channel add https://conda.modular.com/max || true
           pixi install || true
+      # Python gates are strict: a failure here must fail CI.
+      - name: Python regression gates
+        run: |
+          python3 tests/test_addressing_regression.py
+          python3 tests/test_extent_store.py
+          python3 tests/phonological_seed_reference.py
+      # Mojo steps are strict too. They were previously suffixed with
+      # "|| true", which made CI green regardless of compile errors
+      # (this hid the structured_store_smoke to_string breakage).
       - name: Run integrity tests (Mojo)
         run: |
-          pixi run mojo -I src/1_gateway tests/run_integrity.mojo || true
+          pixi run mojo -I src/1_gateway tests/run_integrity.mojo
       - name: Run structured-store smoke (Mojo)
         run: |
-          pixi run mojo -I src/1_gateway tests/structured_store_smoke.mojo || true
+          pixi run mojo -I src/1_gateway tests/structured_store_smoke.mojo
