@@ -39,3 +39,13 @@ def coordinate_to_offset(
     address_space: UInt64 = DEFAULT_ADDRESS_SPACE,
 ) -> UInt64:
     return slot_align(coordinate_to_offset_raw(vector, address_space))
+
+def key_to_offset(
+    fingerprint: UInt64,
+    address_space: UInt64 = DEFAULT_ADDRESS_SPACE,
+) -> UInt64:
+    # Storage address from the full-key FNV-1a fingerprint (integer-only,
+    # portable across compilers). The geometric hash above is kept for
+    # similarity, not storage identity: it truncated keys to 16 bytes and
+    # collapsed systematic key families onto a few slots.
+    return slot_align(fingerprint % address_space)

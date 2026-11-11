@@ -18,14 +18,14 @@ def main() raises:
     var t_start = perf_counter_ns()
 
     # Open the underlying file exactly once and reuse for all operations.
+    var failures = 0
     with open(file_path, "rw") as f:
         for i in range(target):
             var dummy_key = String("semantic_node_") + String(i)
             var dummy_value = String("payload_") + String(i)
             var success = store.write_with_handle(f, dummy_key, dummy_value)
             if not success:
-                # minimal failure handling to avoid noisy output
-                pass
+                failures += 1
 
     var t_end = perf_counter_ns()
     var elapsed_ms = Float64(t_end - t_start) / 1_000_000.0
@@ -33,5 +33,6 @@ def main() raises:
     var throughput = Float64(target) / elapsed_s if elapsed_s > 0 else Float64(0.0)
 
     print("Target Reached:", target)
+    print("Stored:", target - failures, "| Failed writes:", failures)
     print("Total Time (ms):", elapsed_ms)
     print("Throughput (ops/sec):", throughput)

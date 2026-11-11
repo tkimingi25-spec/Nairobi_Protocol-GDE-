@@ -10,16 +10,41 @@ HASH_DIM = 24
 
 
 def _signal(text: str) -> list[float]:
-    lowered = text.lower().encode("utf-8")[: SIGNAL_LEN // 2]
+    # Full key is folded into the 32-point signal (wraps every 16 bytes).
+    # For keys of <=16 bytes this is identical to the original layout.
+    lowered = text.lower().encode("utf-8")
     signal = [0.0] * SIGNAL_LEN
     previous = 0
     for index, value in enumerate(lowered):
-        signal[index * 2] = float(value)
-        signal[index * 2 + 1] = float((value - previous) % 256)
+        pos = (index * 2) % SIGNAL_LEN
+        signal[pos] += float(value)
+        signal[pos + 1] += float((value - previous) % 256)
         previous = value
-    if len(lowered) < SIGNAL_LEN:
-        signal[min(SIGNAL_LEN - 1, len(lowered) * 2)] = float(len(lowered) * 17)
+    if len(lowered) * 2 < SIGNAL_LEN:
+        signal[len(lowered) * 2] = float(len(lowered) * 17)
     return signal
+
+
+ADDRESS_SPACE = 100 * 1024 * 1024 * 1024
+SLOT_SIZE = 256
+_FNV_OFFSET = 14695981039346656037
+_FNV_PRIME = 1099511628211
+_MASK64 = (1 << 64) - 1
+
+
+def fnv1a_64(text: str) -> int:
+    """FNV-1a 64 over the full key bytes. Storage identity (not similarity)."""
+    h = _FNV_OFFSET
+    for b in text.encode("utf-8"):
+        h ^= b
+        h = (h * _FNV_PRIME) & _MASK64
+    return h
+
+
+def key_to_offset(text: str, address_space: int = ADDRESS_SPACE) -> int:
+    """Deterministic slot-aligned storage address from the full key."""
+    raw = fnv1a_64(text) % address_space
+    return (raw // SLOT_SIZE) * SLOT_SIZE
 
 
 def _dct(signal: Iterable[float]) -> list[float]:

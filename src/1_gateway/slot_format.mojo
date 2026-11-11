@@ -2,14 +2,14 @@ comptime SLOT_SIZE = UInt64(256)
 comptime HEADER_SIZE = Int(32)
 comptime PAYLOAD_CAPACITY = Int(224)
 comptime MAX_PROBE_DEPTH = Int(64)
-comptime FORMAT_VERSION = UInt8(0x01)
+comptime FORMAT_VERSION = UInt8(0x02)  # v2: full-key FNV addressing
 
 comptime FLAG_OCCUPIED = UInt8(1)
 comptime FLAG_CONTINUATION = UInt8(2)
 comptime FLAG_COMPRESSED = UInt8(4)
 comptime FLAG_TOMBSTONE = UInt8(8)
 
-struct SlotHeader:
+struct SlotHeader(TrivialRegisterPassable):
     var key_fingerprint: UInt64
     var payload_length: UInt16
     var flags: UInt8

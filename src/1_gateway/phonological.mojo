@@ -11,21 +11,27 @@ struct HashVector(Copyable, Movable):
         self.data = SIMD[DType.float64, 24](0)
 
     def distance(self, other: HashVector) -> Float64:
-        var diff = self.data - other.data
-        return sqrt((diff * diff).reduce_add())
+        # Scalar loop: SIMD width 24 is not a power of two and reduce_add()
+        # miscompiled on Mojo 0.26.2 (see tests/test_addressing_regression.py).
+        var acc = Float64(0.0)
+        for i in range(HASH_DIM):
+            var d = self.data[i] - other.data[i]
+            acc += d * d
+        return sqrt(acc)
 
 def universal_geometric_hash(text: String) -> HashVector:
     var hash_obj = HashVector()
     var lowered = text.lower()
     var signal = SIMD[DType.float64, 32](0)
     var length = lowered.byte_length()
-    if length > SIGNAL_LEN // 2:
-        length = SIGNAL_LEN // 2
+    # Fold the FULL key into the signal (wraps every 16 bytes). Keys of
+    # <=16 bytes produce exactly the original layout.
     var previous = Int(0)
     for i in range(length):
         var char_val = Int(lowered.as_bytes()[i])
-        signal[i * 2] = Float64(char_val)
-        signal[i * 2 + 1] = Float64((char_val - previous + 256) % 256)
+        var pos = (i * 2) % SIGNAL_LEN
+        signal[pos] = signal[pos] + Float64(char_val)
+        signal[pos + 1] = signal[pos + 1] + Float64((char_val - previous + 256) % 256)
         previous = char_val
     if length * 2 < SIGNAL_LEN:
         signal[length * 2] = Float64(length * 17)
@@ -36,7 +42,11 @@ def universal_geometric_hash(text: String) -> HashVector:
         for n in range(SIGNAL_LEN):
             sum_val += signal[n] * cos(PI * Float64(k) * (Float64(n) + 0.5) / Float64(SIGNAL_LEN))
         hash_obj.data[k] = (scale0 if k == 0 else scale) * sum_val
-    var norm = sqrt((hash_obj.data * hash_obj.data).reduce_add())
+    # Scalar norm: same reduce_add() miscompile concern as distance().
+    var norm_sq = Float64(0.0)
+    for i in range(HASH_DIM):
+        norm_sq += hash_obj.data[i] * hash_obj.data[i]
+    var norm = sqrt(norm_sq)
     if norm > 0:
         hash_obj.data = hash_obj.data / norm
     return hash_obj^

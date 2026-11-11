@@ -1,5 +1,4 @@
-from phonological import universal_geometric_hash
-from addressing import coordinate_to_offset
+from addressing import key_to_offset
 from slot_format import SlotHeader, SLOT_SIZE, HEADER_SIZE, PAYLOAD_CAPACITY, MAX_PROBE_DEPTH, FLAG_OCCUPIED, FLAG_TOMBSTONE, serialize_header, parse_header_into, substring
 from fingerprint import fnv1a_64
 from integrity import crc32_compute
@@ -12,12 +11,11 @@ struct StructuredStore:
 
     def write(self, key: String, value: String) raises -> Bool:
         var fingerprint = fnv1a_64(key)
-        var vec = universal_geometric_hash(key)
-        var base_offset = coordinate_to_offset(vec.data)
+        var base_offset = key_to_offset(fingerprint)
         
         var payload_len = value.byte_length()
         if payload_len > PAYLOAD_CAPACITY:
-            payload_len = PAYLOAD_CAPACITY
+            raise Error("Payload exceeds PAYLOAD_CAPACITY: continuation not implemented")
         var payload_str = substring(value, 0, payload_len)
         var crc = crc32_compute(payload_str, payload_len)
 
@@ -56,8 +54,7 @@ struct StructuredStore:
 
     def read(self, key: String) raises -> String:
         var fingerprint = fnv1a_64(key)
-        var vec = universal_geometric_hash(key)
-        var base_offset = coordinate_to_offset(vec.data)
+        var base_offset = key_to_offset(fingerprint)
         with open(self.file_path, "rw") as f:
             for probe in range(MAX_PROBE_DEPTH):
                 var offset = base_offset + UInt64(probe) * SLOT_SIZE
@@ -87,12 +84,11 @@ struct StructuredStore:
     # New API: operate using an already-open file handle to avoid repeatedly opening/closing.
     def write_with_handle(self, mut f: FileHandle, key: String, value: String) raises -> Bool:
         var fingerprint = fnv1a_64(key)
-        var vec = universal_geometric_hash(key)
-        var base_offset = coordinate_to_offset(vec.data)
+        var base_offset = key_to_offset(fingerprint)
         
         var payload_len = value.byte_length()
         if payload_len > PAYLOAD_CAPACITY:
-            payload_len = PAYLOAD_CAPACITY
+            raise Error("Payload exceeds PAYLOAD_CAPACITY: continuation not implemented")
         var payload_str = substring(value, 0, payload_len)
         var crc = crc32_compute(payload_str, payload_len)
 
@@ -130,8 +126,7 @@ struct StructuredStore:
 
     def read_with_handle(self, mut f: FileHandle, key: String) raises -> String:
         var fingerprint = fnv1a_64(key)
-        var vec = universal_geometric_hash(key)
-        var base_offset = coordinate_to_offset(vec.data)
+        var base_offset = key_to_offset(fingerprint)
 
         for probe in range(MAX_PROBE_DEPTH):
             var offset = base_offset + UInt64(probe) * SLOT_SIZE
