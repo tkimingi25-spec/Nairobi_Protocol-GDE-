@@ -27,22 +27,60 @@ Llama 8B for Bounded-Memory Inference". This file is the resume point.
 
 Through the WinFsp mount, the REAL 4.66 GB store cannot be read by
 any application (Python EINVAL on first read, .NET canceled,
-llama.cpp dies during load), while <=2.6 GB stores work perfectly.
-Adapter code is identical in both cases and never reads the
-manifest — only `extents.bin` size/content differs.
+llama.cpp dies during load, cmd copy "Incorrect function" after
+~9 MB). Adapter code never reads the manifest — only the
+`extents.bin` backing file differs between working and failing cases.
 
-Next experiment (cheap, decisive): mount a store whose
-`extents.bin` is extended just past 4 GiB (2^32) with only header
-bytes written (small physical footprint). Read head bytes via
-Python `os.read` in the mount session.
-- If it fails: 4 GiB boundary confirmed; hunt the 32-bit
-  truncation (WinFsp interop / cache-manager interaction).
-- If it works: fault is content-specific to the real store;
-  bisect by content (e.g. mount first N GB of the real extents
-  via a truncated copy is NOT allowed — disk; use sparse views).
+Experiments run 2026-11-11 17:38-17:44 (all with same consumer,
+Python `os.read`, in the mount session):
 
-Other uncontrolled variables if size is exonerated: none known —
-same build (GdeFs5), same consumer, same mount style.
+| Store | Size | Result |
+|---|---|---|
+| synthetic tiny | 168 B | OK |
+| synthetic mid | 50 MB | OK |
+| synthetic zeros | 2.6 GB | OK (correct GGUF head) |
+| synthetic past-4GiB (sparse tail) | 4.297 GB | OK (head + tail bytes correct) |
+| real store, hardlinked copy | 4.66 GB | FAIL (EINVAL at offset 0) |
+| real store | 4.66 GB | FAIL (all consumers) |
+
+Exonerated: file size alone (4 GiB boundary crossed successfully
+by synthetic), NTFS file identity (hardlink fails identically),
+adapter host flags (aligned to official memfs `Init`, real
+security descriptor, unique IndexNumber, volume serial — memfs
+itself works perfectly on this machine), stable timestamps,
+per-read logging (removed in GdeFs7 — still fails), sector size.
+
+Established facts: WinFsp kernel log shows my `Read` callback IS
+dispatched and paging (cache) reads complete `IoStatus=0`; the
+application's own read is failed by the I/O/cache layer above the
+FSD with INVALID_PARAMETER, after ~5-9 MB of successful readahead.
+No exception is ever thrown inside the adapter.
+
+Next hypotheses to test (in order):
+1. Reported-size value: add a size-override arg to GdeFs and mount
+   the real extents reporting e.g. 2.6 GB / 4.297 GB. If reads then
+   work, the trigger is the reported FileSize value 4661211424
+   itself interacting with cache/section creation.
+2. Content bisect without disk cost: mount the real store and read
+   via memory mapping only (paging path works at kernel level);
+   and/or create a store whose backing file is a hardlink to the
+   real extents but with the adapter reading through a bounded
+   pread wrapper that caps every backing read at 32 KB.
+3. Compare against memfs serving a >4 GB file: memfs is RAM-backed
+   (16 GB machine cannot hold 4.66 GB + OS comfortably; a 4.5 GB
+   memfs file is feasible) — if memfs also fails >4 GB, the fault
+   is in WinFsp/Windows large-file handling on user-mode FSDs,
+   not in GdeFs at all, and the correct move is the WSL2/FUSE
+   path (repo's target platform).
+4. Re-examine `GetFileInfo` responses byte-for-byte against memfs
+   for the big file (AllocationSize, FileSize, times) using the
+   WinFsp debug log at maximum verbosity on a SMALL failing
+   repro — if a small repro can be made to fail (try: synthetic
+   store with the real 7.8 MB header bytes as its header extent).
+
+Adapter builds in `C:\tmp\gdefs\`: GdeFs5 (Init-aligned),
+GdeFs6 (+ stable timestamps), GdeFs7 (no per-read logging,
+current source). Source of truth: `src/tools/winfsp/GdeFs.cs`.
 
 ## Constraints to honour
 

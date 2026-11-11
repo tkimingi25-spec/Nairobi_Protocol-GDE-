@@ -27,6 +27,7 @@ namespace GdeFsApp
         private readonly string ExtentsPath;
         private readonly string StatsPath;
         private readonly long FileSize;
+        private readonly UInt64 FileTime;  // stable across all queries
         private readonly FileStream Stream;
         private readonly object IoLock = new object();
         private long Reads;
@@ -37,6 +38,7 @@ namespace GdeFsApp
             ExtentsPath = Path.Combine(storeDir, "extents.bin");
             StatsPath = Path.Combine(storeDir, "gde_stats.log");
             FileSize = new System.IO.FileInfo(ExtentsPath).Length;
+            FileTime = (UInt64)DateTime.Now.ToFileTimeUtc();
             Stream = new FileStream(ExtentsPath, FileMode.Open, FileAccess.Read,
                 FileShare.Read, 1 << 20, FileOptions.RandomAccess);
         }
@@ -44,8 +46,10 @@ namespace GdeFsApp
         private FileInfo InfoFor(string name)
         {
             FileInfo info = default(FileInfo);
-            UInt64 now = (UInt64)DateTime.Now.ToFileTimeUtc();
-            info.CreationTime = info.LastAccessTime = info.LastWriteTime = info.ChangeTime = now;
+            // Stable timestamps: returning DateTime.Now on every query
+            // makes the file look perpetually modified and the cache
+            // manager invalidates in-flight readahead on revalidation.
+            info.CreationTime = info.LastAccessTime = info.LastWriteTime = info.ChangeTime = FileTime;
             if (name == "\\")
             {
                 info.FileAttributes = (UInt32)FileAttributes.Directory;
@@ -156,7 +160,6 @@ namespace GdeFsApp
             UInt32 length, out UInt32 bytesTransferred)
         {
             bytesTransferred = 0;
-            try { File.AppendAllText(StatsPath, "READ-ENTRY off=" + offset + " len=" + length + "\n"); } catch { }
             Interlocked.Increment(ref Reads);
             try { return ReadInner(buffer, offset, length, out bytesTransferred); }
             catch (Exception ex)
@@ -253,10 +256,9 @@ namespace GdeFsApp
                 Console.WriteLine("usage: GdeFs.exe <store_dir> <mountpoint>");
                 return 2;
             }
-            FileSystemHost.SetDebugLogFile("C:\\tmp\\winfsp_debug.log");
             FileSystemHost host = new FileSystemHost(new GdeFs(args[0]));
             host.FileSystemName = "GDE";
-            if (0 > host.Mount(args[1], null, false, UInt32.MaxValue))
+            if (0 > host.Mount(args[1], null, false, 0))
             {
                 Console.WriteLine("cannot mount");
                 return 1;
